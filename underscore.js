@@ -8,11 +8,8 @@
 
 (function() {
   
-  var root = (typeof window != 'undefined') ? window : exports;
-  
-  var previousUnderscore = root._;
-  
-  var _ = root._ = {};
+  var previousUnderscore = typeof _ != "undefined" ? _ : undefined;
+  var _ = typeof exports != "undefined" ? exports : window._ = {};
   
   _.VERSION = '0.2.0';
       
@@ -416,7 +413,8 @@
   // Run Underscore.js in noConflict mode, returning the '_' variable to its
   // previous owner. Returns a reference to the Underscore object.
   _.noConflict = function() {
-    root._ = previousUnderscore;
+    if (typeof exports == "undefined")
+      window._ = previousUnderscore;
     return this;
   };
   
@@ -453,8 +451,4 @@
   _.every    = _.all;
   _.some     = _.any;
   
-  /*------------------------- Export for ServerJS ----------------------------*/
-  
-  if (!_.isUndefined(exports)) exports = _;
-
 })();
