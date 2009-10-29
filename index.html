@@ -72,21 +72,21 @@
     
     <p>
       <a href="http://github.com/documentcloud/underscore/">Underscore</a> is a 
-      utility-belt library for Javascript that provides a lot of the
+      utility-belt library for JavaScript that provides a lot of the
       functional programming support that you would expect in
       <a href="http://prototypejs.org/api">Prototype.js</a> 
       (or <a href="http://www.ruby-doc.org/core/classes/Enumerable.html">Ruby</a>), 
-      but without extending any of the built-in Javascript objects. It's the 
+      but without extending any of the built-in JavaScript objects. It's the 
       tie to go along with <a href="http://docs.jquery.com">jQuery</a>'s tux.
     </p>
     
     <p>
-      Underscore provides 44-odd functions that support both the usual 
+      Underscore provides 45-odd functions that support both the usual 
       functional suspects: <b>map</b>, <b>select</b>, <b>invoke</b> &mdash; 
       as well as more specialized helpers: function binding, javascript 
       templating, deep equality testing, and so on. It delegates to built-in 
       functions, if present, so 
-      <a href="https://developer.mozilla.org/en/New_in_JavaScript_1.6">Javascript 1.6</a> 
+      <a href="https://developer.mozilla.org/en/New_in_JavaScript_1.6">JavaScript 1.6</a> 
       compliant browsers will use the 
       native implementations of <b>forEach</b>, <b>map</b>, <b>filter</b>, 
       <b>every</b>, <b>some</b> and <b>indexOf</b>.
@@ -107,11 +107,11 @@
     <p>
       <table>
         <tr>
-          <td><a href="underscore.js">Development Version (0.2.0)</a></td>
+          <td><a href="underscore.js">Development Version (0.3.2)</a></td>
           <td><i>16kb, Uncompressed with Comments</i></td>
         </tr>
         <tr>
-          <td><a href="underscore-min.js">Production Version (0.2.0)</a></td>
+          <td><a href="underscore-min.js">Production Version (0.3.2)</a></td>
           <td><i>4kb, Packed and Gzipped</i></td>
         </tr>
       </table>
@@ -158,7 +158,8 @@
       <b>Utility</b>
       <br />
       <span class="methods"><a href="#noConflict">noConflict</a>,
-      <a href="#uniqueId">uniqueId</a>, <a href="#template">template</a></span>
+      <a href="#identity">identity</a>, <a href="#uniqueId">uniqueId</a>, 
+      <a href="#template">template</a></span>
     </p>
     
     <div id="documentation">
@@ -171,8 +172,9 @@
         <br />
         Iterates over a <b>list</b> of elements, yielding each in turn to an <b>iterator</b>
         function. The <b>iterator</b> is bound to the <b>context</b> object, if one is
-        passed. If <b>list</b> is a Javascript object, a pair with <b>key</b>
-        and <b>value</b> properties will be yielded. If the list has an <b>each</b> 
+        passed. Each invocation of <b>iterator</b> is called with three arguments:
+        <tt>(element, index, list)</tt>. If <b>list</b> is a JavaScript object, <b>iterator</b>'s
+        arguments will be <tt>(value, key, list)</tt>. If the <b>list</b> has an <b>each</b> 
         method of its own, it will be used instead. Delegates to the native 
         <b>forEach</b> function if it exists.
       </p>
@@ -297,8 +299,8 @@ _.invoke([[5, 1, 7], [3, 2, 1]], 'sort');
       <p id="pluck">
         <b class="header">pluck</b><code>_.pluck(list, propertyName)</code>
         <br />
-        An optimized version of what is perhaps the most common use-case for 
-        <b>map</b>: returning a list of property values.
+        An convenient version of what is perhaps the most common use-case for 
+        <b>map</b>: extracting a list of property values.
       </p>
       <pre>
 var stooges = [{name : 'moe', age : 40}, {name : 'larry', age : 50}, {name : 'curly', age : 60}];
@@ -403,7 +405,7 @@ _.last([3, 2, 1]);
         <b class="header">compact</b><code>_.compact(array)</code>
         <br />
         Returns a copy of the <b>array</b> with all falsy values removed. 
-        In Javascript, <i>false</i>, <i>null</i>, <i>0</i>, <i>""</i>, 
+        In JavaScript, <i>false</i>, <i>null</i>, <i>0</i>, <i>""</i>, 
         <i>undefined</i> and <i>NaN</i> are all falsy.
       </p>
       <pre>
@@ -699,6 +701,19 @@ _.isUndefined(window.missingVariable);
       <pre>
 var underscore = _.noConflict();</pre>
 
+      <p id="identity">
+        <b class="header">identity</b><code>_.identity(value)</code>
+        <br />
+        Returns the same value that is used as the argument. In math: 
+        <tt>f(x) = x</tt><br />
+        This function looks useless, but is used throughout Underscore as 
+        a default iterator.
+      </p>
+      <pre>
+var moe = {name : 'moe'};
+moe === _.identity(moe);
+=> true</pre>
+
       <p id="uniqueId">
         <b class="header">uniqueId</b><code>_.uniqueId([prefix])</code>
         <br />
@@ -713,10 +728,10 @@ _.uniqueId('contact_');
       <p id="template">
         <b class="header">template</b><code>_.template(templateString, [context])</code>
         <br />
-        Compiles Javascript templates into functions that can be evaluated
+        Compiles JavaScript templates into functions that can be evaluated
         for rendering. Useful for rendering complicated bits of HTML from JSON
         data sources. Template functions can both interpolate variables, using<br />
-        <i>&lt;%= &hellip; %&gt;</i>, as well as execute arbitrary Javascript code, with 
+        <i>&lt;%= &hellip; %&gt;</i>, as well as execute arbitrary JavaScript code, with 
         <i>&lt;% &hellip; %&gt;</i>. When you evaluate a template function, pass in a
         <b>context</b> object that has properties corresponding to the template's free
         variables. If you're writing a one-off, you can pass the <b>context</b>
@@ -734,6 +749,30 @@ _.template(list, {people : ['moe', 'curly', 'larry']});
 </pre> 
 
       <h2>Change Log</h2>
+      
+      <p>
+        <b class="header">0.3.2</b><br />
+        Now runs on stock <a href="http://www.mozilla.org/rhino/">Rhino</a> 
+        interpreters with: <tt>load("underscore.js")</tt>.
+        Added <a href="#identity"><tt>identity</tt></a> as a utility function.
+      </p>
+      
+      <p>
+        <b class="header">0.3.1</b><br />
+        All iterators are now passed in the original collection as their third
+        argument, the same as JavaScript 1.6's <b>forEach</b>. Iterating over
+        objects is now called with <tt>(value, key, collection)</tt>, for details
+        see <a href="#each">_.each</a>.
+      </p>
+      
+      <p>
+        <b class="header">0.3.0</b><br />
+        Added <a href="http://github.com/dmitryBaranovskiy">Dmitry Baranovskiy</a>'s 
+        comprehensive optimizations, merged in 
+        <a href="http://github.com/kriskowal/">Kris Kowal</a>'s patches to make Underscore 
+        <a href="http://wiki.commonjs.org/wiki/CommonJS">CommonJS</a> and 
+        <a href="http://narwhaljs.org/">Narwhal</a> compliant.
+      </p>
       
       <p>
         <b class="header">0.2.0</b><br />

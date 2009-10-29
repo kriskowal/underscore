@@ -2,16 +2,26 @@
 // (c) 2009 Jeremy Ashkenas, DocumentCloud Inc.
 // Underscore is freely distributable under the terms of the MIT license.
 // Portions of Underscore are inspired by or borrowed from Prototype.js, 
-// Oliver Steele's Functional, And John Resig's Micro-Templating.
+// Oliver Steele's Functional, and John Resig's Micro-Templating.
 // For all details and documentation:
 // http://documentcloud.github.com/underscore/
 
 (function() {
   
-  var previousUnderscore = typeof _ != "undefined" ? _ : undefined;
-  var _ = typeof exports != "undefined" ? exports : window._ = {};
+  /*------------------------- Baseline setup ---------------------------------*/
   
-  _.VERSION = '0.2.0';
+  // Establish the root object, "window" in the browser, or "global" on the server.
+  var root = this;
+  
+  // Save the previous value of the "_" variable.
+  var previousUnderscore = root._;
+  
+  // Create a safe reference to the Underscore object for the functions below.
+  // Export the Underscore object for CommonJS.
+  var _ = typeof exports != "undefined" ? exports : root._ = {};
+  
+  // Current version.
+  _.VERSION = '0.3.2';
       
   /*------------------------ Collection Functions: ---------------------------*/
     
@@ -23,16 +33,12 @@
       if (obj.forEach) {
         obj.forEach(iterator, context);
       } else if (obj.length) {
-        for (var i=0; i<obj.length; i++) iterator.call(context, obj[i], i);
+        for (var i=0, l = obj.length; i<l; i++) iterator.call(context, obj[i], i, obj);
       } else if (obj.each) {
-        obj.each(function(value) { iterator.call(context, value, index++); });
+        obj.each(function(value) { iterator.call(context, value, index++, obj); });
       } else {
-        var i = 0;
-        for (var key in obj) {
-          var value = obj[key], pair = [key, value];
-          pair.key = key;
-          pair.value = value;
-          iterator.call(context, pair, i++);
+        for (var key in obj) if (Object.prototype.hasOwnProperty.call(obj, key)) {
+          iterator.call(context, obj[key], key, obj);
         }
       }
     } catch(e) {
@@ -41,13 +47,13 @@
     return obj;
   };
   
-  // Return the results of applying the iterator to each element. Use Javascript
+  // Return the results of applying the iterator to each element. Use JavaScript
   // 1.6's version of map, if possible.
   _.map = function(obj, iterator, context) {
     if (obj && obj.map) return obj.map(iterator, context);
     var results = [];
-    _.each(obj, function(value, index) {
-      results.push(iterator.call(context, value, index));
+    _.each(obj, function(value, index, list) {
+      results.push(iterator.call(context, value, index, list));
     });
     return results;
   };
@@ -55,8 +61,8 @@
   // Reduce builds up a single result from a list of values. Also known as
   // inject, or foldl.
   _.reduce = function(obj, memo, iterator, context) {
-    _.each(obj, function(value, index) {
-      memo = iterator.call(context, memo, value, index);
+    _.each(obj, function(value, index, list) {
+      memo = iterator.call(context, memo, value, index, list);
     });
     return memo;
   };
@@ -64,8 +70,8 @@
   // Return the first value which passes a truth test.
   _.detect = function(obj, iterator, context) {
     var result;
-    _.each(obj, function(value, index) {
-      if (iterator.call(context, value, index)) {
+    _.each(obj, function(value, index, list) {
+      if (iterator.call(context, value, index, list)) {
         result = value;
         throw '__break__';
       }
@@ -73,13 +79,13 @@
     return result;
   };
   
-  // Return all the elements that pass a truth test. Use Javascript 1.6's
+  // Return all the elements that pass a truth test. Use JavaScript 1.6's
   // filter(), if it exists.
   _.select = function(obj, iterator, context) {
     if (obj.filter) return obj.filter(iterator, context);
     var results = [];
-    _.each(obj, function(value, index) {
-      if (iterator.call(context, value, index)) results.push(value);
+    _.each(obj, function(value, index, list) {
+      iterator.call(context, value, index, list) && results.push(value);
     });
     return results;
   };
@@ -87,33 +93,32 @@
   // Return all the elements for which a truth test fails.
   _.reject = function(obj, iterator, context) {
     var results = [];
-    _.each(obj, function(value, index) {
-      if (!iterator.call(context, value, index)) results.push(value);
+    _.each(obj, function(value, index, list) {
+      !iterator.call(context, value, index, list) && results.push(value);
     });
     return results;
   };
   
   // Determine whether all of the elements match a truth test. Delegate to
-  // Javascript 1.6's every(), if it is present.
+  // JavaScript 1.6's every(), if it is present.
   _.all = function(obj, iterator, context) {
-    iterator = iterator || function(v){ return v; };
+    iterator = iterator || _.identity;
     if (obj.every) return obj.every(iterator, context);
     var result = true;
-    _.each(obj, function(value, index) {
-      result = result && !!iterator.call(context, value, index);
-      if (!result) throw '__break__';
+    _.each(obj, function(value, index, list) {
+      if (!(result = result && iterator.call(context, value, index, list))) throw '__break__';
     });
     return result;
   };
   
   // Determine if at least one element in the object matches a truth test. Use
-  // Javascript 1.6's some(), if it exists.
+  // JavaScript 1.6's some(), if it exists.
   _.any = function(obj, iterator, context) {
-    iterator = iterator || function(v) { return v; };
+    iterator = iterator || _.identity;
     if (obj.some) return obj.some(iterator, context);
     var result = false;
-    _.each(obj, function(value, index) {
-      if (result = !!iterator.call(context, value, index)) throw '__break__';
+    _.each(obj, function(value, index, list) {
+      if (result = iterator.call(context, value, index, list)) throw '__break__';
     });
     return result;
   };
@@ -123,9 +128,8 @@
   _.include = function(obj, target) {
     if (_.isArray(obj)) return _.indexOf(obj, target) != -1;
     var found = false;
-    _.each(obj, function(pair) {
-      if (pair.value === target) {
-        found = true;
+    _.each(obj, function(value) {
+      if (found = value === target) {
         throw '__break__';
       }
     });
@@ -140,20 +144,18 @@
     });
   };
   
-  // Optimized version of a common use case of map: fetching a property.
+  // Convenience version of a common use case of map: fetching a property.
   _.pluck = function(obj, key) {
-    var results = [];
-    _.each(obj, function(value){ results.push(value[key]); });
-    return results;
+    return _.map(obj, function(value){ return value[key]; });
   };
   
   // Return the maximum item or (item-based computation).
   _.max = function(obj, iterator, context) {
     if (!iterator && _.isArray(obj)) return Math.max.apply(Math, obj);
-    var result;
-    _.each(obj, function(value, index) {
-      var computed = iterator ? iterator.call(context, value, index) : value;
-      if (result == null || computed >= result.computed) result = {value : value, computed : computed};
+    var result = {computed : -Infinity};
+    _.each(obj, function(value, index, list) {
+      var computed = iterator ? iterator.call(context, value, index, list) : value;
+      computed >= result.computed && (result = {value : value, computed : computed});
     });
     return result.value;
   };
@@ -161,20 +163,20 @@
   // Return the minimum element (or element-based computation).
   _.min = function(obj, iterator, context) {
     if (!iterator && _.isArray(obj)) return Math.min.apply(Math, obj);
-    var result;
-    _.each(obj, function(value, index) {
-      var computed = iterator ? iterator.call(context, value, index) : value;
-      if (result == null || computed < result.computed) result = {value : value, computed : computed};
+    var result = {computed : Infinity};
+    _.each(obj, function(value, index, list) {
+      var computed = iterator ? iterator.call(context, value, index, list) : value;
+      computed < result.computed && (result = {value : value, computed : computed});
     });
     return result.value;
   };
   
   // Sort the object's values by a criteria produced by an iterator.
   _.sortBy = function(obj, iterator, context) {
-    return _.pluck(_.map(obj, function(value, index) {
+    return _.pluck(_.map(obj, function(value, index, list) {
       return {
         value : value,
-        criteria : iterator.call(context, value, index)
+        criteria : iterator.call(context, value, index, list)
       };
     }).sort(function(left, right) {
       var a = left.criteria, b = right.criteria;
@@ -185,7 +187,7 @@
   // Use a comparator function to figure out at what index an object should
   // be inserted so as to maintain order. Uses binary search.
   _.sortedIndex = function(array, obj, iterator) {
-    iterator = iterator || function(val) { return val; };
+    iterator = iterator || _.identity;
     var low = 0, high = array.length;
     while (low < high) {
       var mid = (low + high) >> 1;
@@ -273,15 +275,16 @@
   // item in an array, or -1 if the item is not included in the array.
   _.indexOf = function(array, item) {
     if (array.indexOf) return array.indexOf(item);
-    for (i=0; i<array.length; i++) if (array[i] === item) return i;
+    for (i=0, l=array.length; i<l; i++) if (array[i] === item) return i;
     return -1;
   };
   
-  // Provide Javascript 1.6's lastIndexOf, delegating to the native function,
+  // Provide JavaScript 1.6's lastIndexOf, delegating to the native function,
   // if possible.
   _.lastIndexOf = function(array, item) {
     if (array.lastIndexOf) return array.lastIndexOf(item);
-    for (i=array.length - 1; i>=0; i--) if (array[i] === item) return i;
+    var i = array.length;
+    while (i--) if (array[i] === item) return i;
     return -1;
   };
   
@@ -347,12 +350,12 @@
   
   // Retrieve the names of an object's properties.
   _.keys = function(obj) {
-    return _.pluck(obj, 'key');
+    return _.map(obj, function(value, key){ return key; });
   };
   
   // Retrieve the values of an object's properties.
   _.values = function(obj) {
-    return _.pluck(obj, 'value');
+    return _.map(obj, _.identity);
   };
   
   // Extend a given object with all of the properties in a source object.
@@ -400,7 +403,7 @@
   
   // Is a given value a Function?
   _.isFunction = function(obj) {
-    return typeof obj == 'function';
+    return Object.prototype.toString.call(obj) == '[object Function]';
   };
   
   // Is a given variable undefined?
@@ -413,9 +416,13 @@
   // Run Underscore.js in noConflict mode, returning the '_' variable to its
   // previous owner. Returns a reference to the Underscore object.
   _.noConflict = function() {
-    if (typeof exports == "undefined")
-      window._ = previousUnderscore;
+    root._ = previousUnderscore;
     return this;
+  };
+  
+  // Keep the identity function around for default iterators.
+  _.identity = function(value) { 
+    return value;
   };
   
   // Generate a unique integer id (unique within the entire client session).
@@ -425,8 +432,8 @@
     return prefix ? prefix + id : id;
   };
   
-  // Javascript templating a-la ERB, pilfered from John Resig's 
-  // "Secrets of the Javascript Ninja", page 83.
+  // JavaScript templating a-la ERB, pilfered from John Resig's 
+  // "Secrets of the JavaScript Ninja", page 83.
   _.template = function(str, data) {
     var fn = new Function('obj', 
       'var p=[],print=function(){p.push.apply(p,arguments);};' +
@@ -450,5 +457,5 @@
   _.filter   = _.select;
   _.every    = _.all;
   _.some     = _.any;
-  
+
 })();

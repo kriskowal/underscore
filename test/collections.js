@@ -12,12 +12,27 @@ $(document).ready(function() {
     equals(answer, 2, 'the loop broke in the middle');
     
     var answers = [];
-    _.each([1, 2, 3], function(num) { answers.push(num * this.multiplier);}, {multiplier : 5});
+    _.each([1, 2, 3], function(num){ answers.push(num * this.multiplier);}, {multiplier : 5});
     equals(answers.join(', '), '5, 10, 15', 'context object property accessed');
+    
+    answers = [];
+    _.each("moe", function(letter){ answers.push(letter); });
+    equals(answers.join(', '), 'm, o, e', 'iterates over the letters in strings');
     
     answers = [];
     _.forEach([1, 2, 3], function(num){ answers.push(num); });
     equals(answers.join(', '), '1, 2, 3', 'aliased as "forEach"');
+    
+    answers = [];
+    var obj = {one : 1, two : 2, three : 3};
+    obj.constructor.prototype.four = 4;
+    _.each(obj, function(value, key){ answers.push(key); });
+    equals(answers.join(", "), 'one, two, three', 'iterating over objects works, and ignores the object prototype.');
+    delete obj.constructor.prototype.four;
+    
+    answer = null;
+    _.each([1, 2, 3], function(num, index, arr){ if (_.include(arr, num)) answer = true; });
+    ok(answer, 'can reference the original collection from inside the iterator');
   });
   
   test('collections: map', function() {
@@ -121,7 +136,7 @@ $(document).ready(function() {
     ok(_.isArray(_.toArray(arguments)), 'arguments object converted into array');
     
     var numbers = _.toArray({one : 1, two : 2, three : 3});
-    equals(_.pluck(numbers, '0').join(', '), 'one, two, three', 'object flattened into array');
+    equals(numbers.join(', '), '1, 2, 3', 'object flattened into array');
   });
   
   test('collections: size', function() {
